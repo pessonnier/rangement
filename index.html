@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Gestionnaire de Disques Durs</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .drive {
+            border: 1px solid #ccc;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .theme-item {
+            margin: 5px 0;
+            padding: 5px;
+            background: #f5f5f5;
+            cursor: pointer;
+        }
+        button {
+            margin: 5px;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+        .edit-input {
+            width: 70%;
+            padding: 5px;
+        }
+        .save-section {
+            margin: 20px 0;
+            padding: 10px;
+            background: #e0e0e0;
+        }
+        .representation {
+            white-space: pre-wrap;
+            font-family: monospace;
+            padding: 10px;
+            background: #fff;
+            border: 1px solid #ccc;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Mes Disques Durs 🖥️</h1>
+    
+    <div class="save-section">
+        <button onclick="document.getElementById('fileInput').click()" style="background: #FF9800; color: white;">📂 Charger JSON</button>
+        <button onclick="downloadJSON()">📥 Sauvegarder en JSON</button>
+        <button onclick="saveData()" style="background: #4CAF50; color: white;">💾 Sauvegarder</button>
+        <button onclick="showRepresentation()" style="background: #2196F3; color: white;">📋 Voir la représentation</button>
+        <input type="file" id="fileInput" class="hidden" accept=".json">
+    </div>
+
+    <button onclick="addNewDrive()">+ Ajouter un disque</button>
+    <div class="container" id="drivesContainer"></div>
+    
+    <div id="representationContainer" class="representation" style="display: none;"></div>
+
+    <script>
+        // Données initiales
+        let drives = JSON.parse(localStorage.getItem('drives')) || [
+            {
+                id: 1,
+                name: "Disque de travail",
+                themes: ["Documents", "Projets", "Archives"]
+            },
+            {
+                id: 2,
+                name: "Disque média",
+                themes: ["Photos", "Musique", "Vidéos"]
+            }
+        ];
+
+        // Sauvegarder dans le localStorage
+        function saveData() {
+            localStorage.setItem('drives', JSON.stringify(drives));
+        }
+
+        // Afficher les disques
+        function renderDrives() {
+            const container = document.getElementById('drivesContainer');
+            container.innerHTML = '';
+            
+            drives.forEach(drive => {
+                const driveEl = document.createElement('div');
+                driveEl.className = 'drive';
+                driveEl.innerHTML = `
+                    <h3>${drive.name}</h3>
+                    <div class="themes-list" id="themes-${drive.id}"></div>
+                    <button onclick="addTheme(${drive.id})">+ Thème</button>
+                    <button onclick="editDrive(${drive.id})">✏️</button>
+                    <button onclick="deleteDrive(${drive.id})">🗑️</button>
+                `;
+                
+                const themesList = driveEl.querySelector(`#themes-${drive.id}`);
+                drive.themes.forEach((theme, index) => {
+                    const themeEl = document.createElement('div');
+                    themeEl.className = 'theme-item';
+                    themeEl.innerHTML = `
+                        ${theme}
+                        <button onclick="editTheme(${drive.id}, ${index})">✏️</button>
+                        <button onclick="deleteTheme(${drive.id}, ${index})">🗑️</button>
+                    `;
+                    themesList.appendChild(themeEl);
+                });
+                
+                container.appendChild(driveEl);
+            });
+        }
+
+        // Ajouter un nouveau disque
+        function addNewDrive() {
+            const name = prompt('Nom du nouveau disque:');
+            if (name) {
+                drives.push({
+                    id: Date.now(),
+                    name: name,
+                    themes: []
+                });
+                saveData();
+                renderDrives();
+            }
+        }
+
+        // Modifier un disque
+        function editDrive(driveId) {
+            const drive = drives.find(d => d.id === driveId);
+            const newName = prompt('Nouveau nom:', drive.name);
+            if (newName) {
+                drive.name = newName;
+                saveData();
+                renderDrives();
+            }
+        }
+
+        // Supprimer un disque
+        function deleteDrive(driveId) {
+            if (confirm('Supprimer ce disque ?')) {
+                drives = drives.filter(d => d.id !== driveId);
+                saveData();
+                renderDrives();
+            }
+        }
+
+        // Ajouter un thème
+        function addTheme(driveId) {
+            const theme = prompt('Nouveau thème:');
+            if (theme) {
+                const drive = drives.find(d => d.id === driveId);
+                drive.themes.push(theme);
+                saveData();
+                renderDrives();
+            }
+        }
+
+        // Modifier un thème
+        function editTheme(driveId, themeIndex) {
+            const drive = drives.find(d => d.id === driveId);
+            const newTheme = prompt('Modifier le thème:', drive.themes[themeIndex]);
+            if (newTheme) {
+                drive.themes[themeIndex] = newTheme;
+                saveData();
+                renderDrives();
+            }
+        }
+
+        // Supprimer un thème
+        function deleteTheme(driveId, themeIndex) {
+            if (confirm('Supprimer ce thème ?')) {
+                const drive = drives.find(d => d.id === driveId);
+                drive.themes.splice(themeIndex, 1);
+                saveData();
+                renderDrives();
+            }
+        }
+
+        // Fonction de sauvegarde modifiée avec feedback
+        function saveData() {
+            localStorage.setItem('drives', JSON.stringify(drives));
+            showMessage('Données sauvegardées !');
+        }
+
+        // Afficher la représentation structurée
+        function showRepresentation() {
+            const container = document.getElementById('representationContainer');
+            const jsonOutput = JSON.stringify(drives, null, 2);
+            
+            container.innerHTML = `
+                <h3>Représentation des données :</h3>
+                ${jsonOutput}
+                <button onclick="downloadJSON()">📥 Télécharger JSON</button>
+            `;
+            container.style.display = 'block';
+        }
+
+        // Télécharger le JSON avec nom personnalisé
+        function downloadJSON() {
+            // Demander le nom du fichier
+            const defaultName = "disques-sauvegarde";
+            const fileName = prompt("Entrez le nom du fichier :", defaultName) || defaultName;
+            
+            if (!fileName) return; // Annulation
+
+            // Nettoyer le nom et forcer l'extension .json
+            let cleanName = fileName
+                .replace(/[^a-z0-9éàèùâêîôûäëïöüçñ ._-]/gi, "_") // Caractères spéciaux
+                .replace(/\.json$/i, "") + ".json"; // Extension unique
+
+            // Créer le lien de téléchargement
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(drives, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", cleanName);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            document.body.removeChild(downloadAnchor);
+        }
+
+        // Message temporaire
+        function showMessage(text) {
+            const msg = document.createElement('div');
+            msg.textContent = text;
+            msg.style = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: #4CAF50;
+                color: white;
+                padding: 15px;
+                border-radius: 5px;
+                z-index: 1000;
+            `;
+            document.body.appendChild(msg);
+            setTimeout(() => msg.remove(), 2000);
+        }
+
+        // Gestion du chargement de fichier
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const newData = JSON.parse(e.target.result);
+                    if (!Array.isArray(newData)) throw new Error('Format invalide');
+                    
+                    drives = newData;
+                    saveData();
+                    renderDrives();
+                    showMessage('Données chargées avec succès !');
+                } catch (error) {
+                    showMessage('Erreur : Fichier JSON invalide');
+                    console.error(error);
+                }
+            };
+            reader.readAsText(file);
+        });
+        // Initialisation
+        renderDrives();
+    </script>
+</body>
+</html>
